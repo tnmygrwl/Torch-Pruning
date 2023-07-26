@@ -103,10 +103,7 @@ class BasicBlock(nn.Module):
         return out
 
     def forward(self, x):
-        if self.new_resnet:
-            return self._new_resnet(x)
-        else:
-            return self._old_resnet(x)
+        return self._new_resnet(x) if self.new_resnet else self._old_resnet(x)
 
 
 class SEBasicBlock(nn.Module):
@@ -169,10 +166,7 @@ class SEBasicBlock(nn.Module):
         return out
 
     def forward(self, x):
-        if self.new_resnet:
-            return self._new_resnet(x)
-        else:
-            return self._old_resnet(x)
+        return self._new_resnet(x) if self.new_resnet else self._old_resnet(x)
 
 
 class CifarNet(nn.Module):
@@ -240,82 +234,70 @@ class CifarNet(nn.Module):
 def se_resnet20(**kwargs):
     """Constructs a ResNet-18 model.
     """
-    model = CifarNet(SEBasicBlock, 3, **kwargs)
-    return model
+    return CifarNet(SEBasicBlock, 3, **kwargs)
 
 
 def se_resnet32(**kwargs):
     """Constructs a ResNet-34 model.
     """
-    model = CifarNet(SEBasicBlock, 5, **kwargs)
-    return model
+    return CifarNet(SEBasicBlock, 5, **kwargs)
 
 
 def se_resnet44(**kwargs):
     """Constructs a ResNet-34 model.
     """
-    model = CifarNet(SEBasicBlock, 7, **kwargs)
-    return model
+    return CifarNet(SEBasicBlock, 7, **kwargs)
 
 
 def se_resnet56(**kwargs):
     """Constructs a ResNet-34 model.
     """
-    model = CifarNet(SEBasicBlock, 9, **kwargs)
-    return model
+    return CifarNet(SEBasicBlock, 9, **kwargs)
 
 
 def se_resnet110(**kwargs):
     """Constructs a ResNet-34 model.
     """
-    model = CifarNet(SEBasicBlock, 18, **kwargs)
-    return model
+    return CifarNet(SEBasicBlock, 18, **kwargs)
 
 
 def se_resnet164(**kwargs):
     """Constructs a ResNet-34 model.
     """
-    model = CifarNet(SEBasicBlock, 27, **kwargs)
-    return model
+    return CifarNet(SEBasicBlock, 27, **kwargs)
 
 
 def resnet20(**kwargs):
     """Constructs a ResNet-18 model.
     """
-    model = CifarNet(BasicBlock, 3, **kwargs)
-    return model
+    return CifarNet(BasicBlock, 3, **kwargs)
 
 
 def resnet32(**kwargs):
     """Constructs a ResNet-34 model.
     """
-    model = CifarNet(BasicBlock, 5, **kwargs)
-    return model
+    return CifarNet(BasicBlock, 5, **kwargs)
 
 
 def resnet44(**kwargs):
     """Constructs a ResNet-34 model.
     """
-    model = CifarNet(BasicBlock, 7, **kwargs)
-    return model
+    return CifarNet(BasicBlock, 7, **kwargs)
 
 
 def resnet56(**kwargs):
     """Constructs a ResNet-34 model.
     """
-    model = CifarNet(BasicBlock, 9, **kwargs)
-    return model
+    return CifarNet(BasicBlock, 9, **kwargs)
 
 
 def resnet110(**kwargs):
     """Constructs a ResNet-34 model.
     """
-    model = CifarNet(BasicBlock, 18, **kwargs)
-    return model
+    return CifarNet(BasicBlock, 18, **kwargs)
 
 
 def resnet164(**kwargs):
     """Constructs a ResNet-34 model.
     """
-    model = CifarNet(BasicBlock, 27, **kwargs)
-    return model
+    return CifarNet(BasicBlock, 27, **kwargs)

@@ -7,20 +7,20 @@ import numpy as np
 import torch
 
 def flatten_dict(dic):
-    flattned = dict()
+    flattned = {}
     def _flatten(prefix, d):
         for k, v in d.items():
             if isinstance(v, dict):
                 if prefix is None:
                     _flatten( k, v )
                 else:
-                    _flatten( prefix+'/%s'%k, v )
+                    _flatten(f'{prefix}/{k}', v)
             else:
                 if prefix is None:
                     flattned[k] = v
                 else:
-                    flattned[ prefix+'/%s'%k ] = v
-        
+                    flattned[f'{prefix}/{k}'] = v
+
     _flatten(None, dic)
     return flattned
 
@@ -33,9 +33,9 @@ class _ColorfulFormatter(logging.Formatter):
 
         if record.levelno == logging.WARNING:
             prefix = colored("WARNING", "yellow", attrs=["blink"])
-        elif record.levelno == logging.ERROR or record.levelno == logging.CRITICAL:
+        elif record.levelno in [logging.ERROR, logging.CRITICAL]:
             prefix = colored("ERROR", "red", attrs=["blink", "underline"])
         else:
             return log
-        
-        return prefix + " " + log
+
+        return f"{prefix} {log}"

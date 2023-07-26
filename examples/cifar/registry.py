@@ -66,8 +66,7 @@ MODEL_DICT = {
 
 
 def get_model(name: str, num_classes, pretrained=False, **kwargs):
-    model = MODEL_DICT[name](num_classes=num_classes)
-    return model 
+    return MODEL_DICT[name](num_classes=num_classes) 
 
 
 def get_dataset(name: str, data_root: str='data', return_transform=False):

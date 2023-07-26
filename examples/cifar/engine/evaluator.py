@@ -11,7 +11,7 @@ class Evaluator(object):
     def eval(self, model, device=None, progress=False):
         self.metric.reset()
         with torch.no_grad():
-            for i, (inputs, targets) in enumerate( tqdm(self.dataloader, disable=not progress) ):
+            for inputs, targets in tqdm(self.dataloader, disable=not progress):
                 inputs, targets = inputs.cuda(), targets.cuda()
                 outputs = model( inputs )
                 self.metric.update(outputs, targets)

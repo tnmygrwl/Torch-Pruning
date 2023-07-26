@@ -86,9 +86,8 @@ class PreActResNet(nn.Module):
         self.linear = nn.Linear(self.input_channels, num_classes)
 
     def _make_layers(self, block, block_num, out_channels, stride):
-        layers = []
+        layers = [block(self.input_channels, out_channels, stride)]
 
-        layers.append(block(self.input_channels, out_channels, stride))
         self.input_channels = out_channels * block.expansion
 
         while block_num - 1:

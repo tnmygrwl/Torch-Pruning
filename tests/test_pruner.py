@@ -11,11 +11,11 @@ print(model)
 # Global metrics
 example_inputs = torch.randn(1, 3, 224, 224)
 imp = tp.importance.MagnitudeImportance(p=2)
-ignored_layers = []
-for m in model.modules():
-    if isinstance(m, torch.nn.Linear) and m.out_features == 1000:
-        ignored_layers.append(m)
-
+ignored_layers = [
+    m
+    for m in model.modules()
+    if isinstance(m, torch.nn.Linear) and m.out_features == 1000
+]
 total_steps = 5
 pruner = tp.pruner.LocalMagnitudePruner(
     model,
@@ -26,7 +26,7 @@ pruner = tp.pruner.LocalMagnitudePruner(
     ignored_layers=ignored_layers,
 )
 
-for i in range(total_steps):
+for _ in range(total_steps):
     ori_size = tp.utils.count_params(model)
     pruner.step()
     print(

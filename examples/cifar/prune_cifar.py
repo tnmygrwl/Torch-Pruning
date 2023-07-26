@@ -35,7 +35,7 @@ def eval(model, test_loader):
     model.to(device)
     model.eval()
     with torch.no_grad():
-        for i, (img, target) in enumerate(test_loader):
+        for img, target in test_loader:
             img = img.to(device)
             out = model(img)
             pred = out.max(1)[1].detach().cpu().numpy()
@@ -78,10 +78,11 @@ def get_pruner(model, args):
     user_defined_parameters=[model.pos_embedding, model.cls_token] if 'vit' in args.model else None
     example_inputs = torch.randn(1, 3, 32, 32)
     imp = tp.importance.MagnitudeImportance(p=2)
-    ignored_layers = []
-    for m in model.modules():
-        if isinstance(m, torch.nn.Linear) and m.out_features == 1000:
-            ignored_layers.append(m)
+    ignored_layers = [
+        m
+        for m in model.modules()
+        if isinstance(m, torch.nn.Linear) and m.out_features == 1000
+    ]
     pruner = tp.pruner.MagnitudeBasedPruner(
         model,
         example_inputs,
@@ -112,7 +113,7 @@ def main():
         train_model(model, train_loader, test_loader)
     elif args.mode=='prune':
         ori_size = tp.utils.count_params(model)
-        print("Loading model from %s"%(args.restore_from ))
+        print(f"Loading model from {args.restore_from}")
         pruner = get_pruner(model, args)
 
         for step in range(pruner.steps):
@@ -123,7 +124,7 @@ def main():
             train_model(model, train_loader, test_loader)
 
     elif args.mode=='test':
-        print("Load model from %s"%( args.restore_from ))
+        print(f"Load model from {args.restore_from}")
         params = tp.utils.count_params(model)
         print("Number of Parameters: %.1fM"%(params/1e6))
         acc = eval(model, test_loader)

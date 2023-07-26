@@ -95,10 +95,7 @@ class ResNet(nn.Module):
         feature = out.view(out.size(0), -1)
         out = self.linear(feature)
 
-        if return_features:
-            return out, feature
-        else:
-            return out
+        return (out, feature) if return_features else out
  
 def resnet18(num_classes=10):
     return ResNet(BasicBlock, [2,2,2,2], num_classes)

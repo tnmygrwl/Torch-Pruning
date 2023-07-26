@@ -154,10 +154,7 @@ class MiddleFlow(nn.Module):
         return x
 
     def _make_flow(self, block, times):
-        flows = []
-        for i in range(times):
-            flows.append(block())
-
+        flows = [block() for _ in range(times)]
         return nn.Sequential(*flows)
 
 

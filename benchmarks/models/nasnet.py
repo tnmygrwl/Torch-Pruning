@@ -267,7 +267,7 @@ class NasNetA(nn.Module):
         """
 
         layers = []
-        for r in range(repeat):
+        for _ in range(repeat):
             layers.append(block(self.x_filters, self.prev_filters, output))
             self.prev_filters = self.x_filters
             self.x_filters = output * 6 #concatenate 6 branches
@@ -292,8 +292,7 @@ class NasNetA(nn.Module):
     def _make_layers(self, repeat_cell_num, reduction_num):
 
         layers = []
-        for i in range(reduction_num):
-
+        for _ in range(reduction_num):
             layers.extend(self._make_normal(NormalCell, repeat_cell_num, self.filters))
             self.filters *= 2
             layers.append(self._make_reduction(ReductionCell, self.filters))

@@ -28,29 +28,28 @@ class BaseStrategy(ABC):
 
 class RandomStrategy(BaseStrategy):
 
-    def apply(self, weights, amount=0.0, round_to=1)->  Sequence[int]:  # return index
+    def apply(self, weights, amount=0.0, round_to=1) -> Sequence[int]:  # return index
         if amount<=0: return []
         n = len(weights)
         n_to_prune = int(amount*n) if amount<1.0 else amount
         n_to_prune = round_pruning_amount(n, n_to_prune, round_to)
-        if n_to_prune == 0: return []
-        indices = random.sample( list( range(n) ), k=n_to_prune )
-        return indices
+        return (
+            [] if n_to_prune == 0 else random.sample(list(range(n)), k=n_to_prune)
+        )
 
 class LNStrategy(BaseStrategy):
     def __init__(self, p):
         self.p = p
 
-    def apply(self, weights, amount=0.0, round_to=1)->  Sequence[int]:  # return index
+    def apply(self, weights, amount=0.0, round_to=1) -> Sequence[int]:  # return index
         if amount<=0: return []
         n = len(weights)
         l1_norm = torch.norm( weights.view(n, -1), p=self.p, dim=1 )
-        n_to_prune = int(amount*n) if amount<1.0 else amount 
+        n_to_prune = int(amount*n) if amount<1.0 else amount
         n_to_prune = round_pruning_amount(n, n_to_prune, round_to)
         if n_to_prune == 0: return []
-        threshold = torch.kthvalue(l1_norm, k=n_to_prune).values 
-        indices = torch.nonzero(l1_norm <= threshold).view(-1).tolist()
-        return indices
+        threshold = torch.kthvalue(l1_norm, k=n_to_prune).values
+        return torch.nonzero(l1_norm <= threshold).view(-1).tolist()
 
 class L1Strategy(LNStrategy):
     def __init__(self):

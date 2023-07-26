@@ -307,7 +307,7 @@ class InceptionV4(nn.Module):
 
         layers = nn.Sequential()
         for l in range(block_num):
-            layers.add_module("{}_{}".format(block.__name__, l), block(input_channels))
+            layers.add_module(f"{block.__name__}_{l}", block(input_channels))
             input_channels = output_channels
 
         return layers
@@ -535,7 +535,7 @@ class InceptionResNetV2(nn.Module):
 
         layers = nn.Sequential()
         for l in range(block_num):
-            layers.add_module("{}_{}".format(block.__name__, l), block(input_channels))
+            layers.add_module(f"{block.__name__}_{l}", block(input_channels))
             input_channels = output_channels
 
         return layers

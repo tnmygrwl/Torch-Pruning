@@ -113,7 +113,7 @@ def main_worker(gpu, ngpus_per_node, args):
     # GPU and FP16
     ############################################
     if args.gpu is not None:
-        print("Use GPU: {} for training".format(args.gpu))
+        print(f"Use GPU: {args.gpu} for training")
     if args.distributed:
         if args.dist_url == "env://" and args.rank == -1:
             args.rank = int(os.environ["RANK"])
@@ -133,13 +133,19 @@ def main_worker(gpu, ngpus_per_node, args):
     ############################################
     # Logger
     ############################################
-    log_name = 'R%d-%s-%s'%(args.rank, args.dataset, args.model) if args.multiprocessing_distributed else '%s-%s'%(args.dataset, args.model)
-    args.logger = engine.utils.get_logger(log_name, output='run/pretrain/log-%s-%s.txt'%(args.dataset, args.model))
+    log_name = (
+        'R%d-%s-%s' % (args.rank, args.dataset, args.model)
+        if args.multiprocessing_distributed
+        else f'{args.dataset}-{args.model}'
+    )
+    args.logger = engine.utils.get_logger(
+        log_name, output=f'run/pretrain/log-{args.dataset}-{args.model}.txt'
+    )
     if args.rank<=0:
         for k, v in engine.utils.flatten_dict( vars(args) ).items(): # print args
-            args.logger.info( "%s: %s"%(k,v) )
-    
-    
+            args.logger.info(f"{k}: {v}")
+                
+
     ############################################
     # Setup dataset
     ############################################
@@ -206,19 +212,19 @@ def main_worker(gpu, ngpus_per_node, args):
     ############################################
     if args.resume:
         if os.path.isfile(args.resume):
-            print("=> loading checkpoint '{}'".format(args.resume))
+            print(f"=> loading checkpoint '{args.resume}'")
             if args.gpu is None:
                 checkpoint = torch.load(args.resume)
             else:
                 # Map model to be loaded to specified single gpu.
-                loc = 'cuda:{}'.format(args.gpu)
+                loc = f'cuda:{args.gpu}'
                 checkpoint = torch.load(args.resume, map_location=loc)
 
             if isinstance(model, nn.Module):
                 model.load_state_dict(checkpoint['state_dict'])
             else:
                 model.module.load_state_dict(checkpoint['state_dict'])
-            
+
             best_acc1 = checkpoint['best_acc1']
 
             try: 
@@ -226,10 +232,11 @@ def main_worker(gpu, ngpus_per_node, args):
                 optimizer.load_state_dict(checkpoint['optimizer'])
                 scheduler.load_state_dict(checkpoint['scheduler'])
             except: print("Fails to load additional information")
-            print("[!] loaded checkpoint '{}' (epoch {} acc {})"
-                  .format(args.resume, checkpoint['epoch'], best_acc1))
+            print(
+                f"[!] loaded checkpoint '{args.resume}' (epoch {checkpoint['epoch']} acc {best_acc1})"
+            )
         else:
-            print("[!] no checkpoint found at '{}'".format(args.resume))
+            print(f"[!] no checkpoint found at '{args.resume}'")
 
     ############################################
     # Evaluate
@@ -257,9 +264,11 @@ def main_worker(gpu, ngpus_per_node, args):
         scheduler.step()
         is_best = acc1 > best_acc1
         best_acc1 = max(acc1, best_acc1)
-        _best_ckpt = 'run/pretrain/%s_%s.pth'%(args.dataset, args.model)
-        if not args.multiprocessing_distributed or (args.multiprocessing_distributed
-                and args.rank % ngpus_per_node == 0):
+        _best_ckpt = f'run/pretrain/{args.dataset}_{args.model}.pth'
+        if (
+            not args.multiprocessing_distributed
+            or args.rank % ngpus_per_node == 0
+        ):
             save_checkpoint({
                 'epoch': epoch + 1,
                 'arch': args.model,

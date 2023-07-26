@@ -76,7 +76,10 @@ class DenseNet(nn.Module):
         self.features = nn.Sequential()
 
         for index in range(len(nblocks) - 1):
-            self.features.add_module("dense_block_layer_{}".format(index), self._make_dense_layers(block, inner_channels, nblocks[index]))
+            self.features.add_module(
+                f"dense_block_layer_{index}",
+                self._make_dense_layers(block, inner_channels, nblocks[index]),
+            )
             inner_channels += growth_rate * nblocks[index]
 
             #"""If a dense block contains m feature-maps, we let the
@@ -84,10 +87,18 @@ class DenseNet(nn.Module):
             #maps, where 0 < θ ≤ 1 is referred to as the compression
             #fac-tor.
             out_channels = int(reduction * inner_channels) # int() will automatic floor the value
-            self.features.add_module("transition_layer_{}".format(index), Transition(inner_channels, out_channels))
+            self.features.add_module(
+                f"transition_layer_{index}",
+                Transition(inner_channels, out_channels),
+            )
             inner_channels = out_channels
 
-        self.features.add_module("dense_block{}".format(len(nblocks) - 1), self._make_dense_layers(block, inner_channels, nblocks[len(nblocks)-1]))
+        self.features.add_module(
+            f"dense_block{len(nblocks) - 1}",
+            self._make_dense_layers(
+                block, inner_channels, nblocks[len(nblocks) - 1]
+            ),
+        )
         inner_channels += growth_rate * nblocks[len(nblocks) - 1]
         self.features.add_module('bn', nn.BatchNorm2d(inner_channels))
         self.features.add_module('relu', nn.ReLU(inplace=True))
@@ -107,7 +118,9 @@ class DenseNet(nn.Module):
     def _make_dense_layers(self, block, in_channels, nblocks):
         dense_block = nn.Sequential()
         for index in range(nblocks):
-            dense_block.add_module('bottle_neck_layer_{}'.format(index), block(in_channels, self.growth_rate))
+            dense_block.add_module(
+                f'bottle_neck_layer_{index}', block(in_channels, self.growth_rate)
+            )
             in_channels += self.growth_rate
         return dense_block
 

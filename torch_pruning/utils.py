@@ -13,10 +13,7 @@ def count_prunable_params_of_modules(module):
             num_params+= module.weight.numel() + module.bias.numel()
         return num_params
     elif isinstance( module, TORCH_PRELU ):
-        if len( module.weight )==1:
-            return 0
-        else:
-            return module.weight.numel
+        return 0 if len( module.weight )==1 else module.weight.numel
     else:
         return 0
 
@@ -28,10 +25,7 @@ def count_prunable_in_channels(module):
     elif isinstance( module, TORCH_BATCHNORM ):
         return module.num_features
     elif isinstance( module, TORCH_PRELU ):
-        if len( module.weight )==1:
-            return 0
-        else:
-            return len(module.weight)
+        return 0 if len( module.weight )==1 else len(module.weight)
     else:
         return 0
 
@@ -43,15 +37,12 @@ def count_prunable_out_channels(module):
     elif isinstance( module, TORCH_BATCHNORM ):
         return module.num_features
     elif isinstance( module, TORCH_PRELU ):
-        if len( module.weight )==1:
-            return 0
-        else:
-            return len(module.weight)
+        return 0 if len( module.weight )==1 else len(module.weight)
     else:
         return 0
 
 def count_params(module):
-    return sum([ p.numel() for p in module.parameters() ])
+    return sum(p.numel() for p in module.parameters())
 
 def count_macs_and_params(model, input_size, example_inputs=None):
     if example_inputs is None:

@@ -49,7 +49,7 @@ def eval(model, test_loader):
     model.to(device)
     model.eval()
     with torch.no_grad():
-        for i, (img, target) in enumerate(test_loader):
+        for img, target in test_loader:
             img = img.to(device)
             out = model(img)
             pred = out.max(1)[1].detach().cpu().numpy()
@@ -116,16 +116,14 @@ def train_model(
                     model,
                     os.path.join(
                         args.save_dir,
-                        "{}_{}_{}_step{}.pth".format(
-                            args.dataset, args.model, args.method, pruner.current_step
-                        ),
+                        f"{args.dataset}_{args.model}_{args.method}_step{pruner.current_step}.pth",
                     ),
                 )
             elif args.mode == "train":
                 torch.save(
                     model.state_dict(),
                     os.path.join(
-                        args.save_dir, "{}_{}.pth".format(args.dataset, args.model)
+                        args.save_dir, f"{args.dataset}_{args.model}.pth"
                     ),
                 )
             best_acc = acc
@@ -180,14 +178,13 @@ def get_pruner(model, args):
         imp = tp.importance.BNScaleImportance()
         pruner_entry = tp.pruner.GlobalBNScalePruner
     args.requires_reg = requires_reg
-    ignored_layers = []
     layer_ch_sparsity = {}
-    for m in model.modules():
-        if isinstance(m, torch.nn.Linear) and m.out_features == args.num_classes:
-            ignored_layers.append(m)
-        # if isinstance(m, torch.nn.Conv2d) and m.kernel_size[0]==1:
-        #    ignored_layers.append(m)
-
+    ignored_layers = [
+        m
+        for m in model.modules()
+        if isinstance(m, torch.nn.Linear)
+        and m.out_features == args.num_classes
+    ]
     # if 'resnet56' in args.model:
     #    ignored_layers.append(model.conv1)
     #    layer_ch_sparsity[model.layer1] = 0.75
@@ -216,13 +213,11 @@ def main():
             method=args.method,
             time=time.asctime().replace(" ", "_"),
         )
-        log_file = "{}/{}_{}_{}.txt".format(
-            args.save_dir, args.dataset, args.method, args.model
-        )
+        log_file = f"{args.save_dir}/{args.dataset}_{args.method}_{args.model}.txt"
         args.save_dir = os.path.join(args.save_dir, args.mode, exp_id)
     elif args.mode == "pretrain":
         args.save_dir = os.path.join(args.save_dir, args.mode)
-        log_file = "{}/{}_{}.txt".format(args.save_dir, args.dataset, args.model)
+        log_file = f"{args.save_dir}/{args.dataset}_{args.model}.txt"
     elif args.mode == "test":
         log_file = None
     args.logger = tools.utils.get_logger(args.mode, output=log_file)
@@ -245,7 +240,7 @@ def main():
     args.num_classes = num_classes
 
     for k, v in tools.utils.flatten_dict(vars(args)).items():  # print args
-        args.logger.info("%s: %s" % (k, v))
+        args.logger.info(f"{k}: {v}")
 
     if args.restore is not None:
         loaded = torch.load(args.restore, map_location="cpu")
@@ -329,7 +324,7 @@ def main():
             )
     elif args.mode == "test":
         model.eval()
-        args.logger.info("Load model from {}".format(args.restore))
+        args.logger.info(f"Load model from {args.restore}")
         params = tools.utils.get_n_params(model)
         macs = tools.utils.get_n_macs(model, img_size=(32, 32))
         args.logger.info("Params: {:.2f} M".format(params / 1e6))

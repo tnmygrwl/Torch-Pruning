@@ -89,9 +89,9 @@ class MetaPruner(abc.ABC):
             )
             active_plan = True
             for dep, _ in plan:
-                module = dep.target.module
                 pruning_fn = dep.handler
                 if pruning_fn in self.DG.out_channel_pruners:
+                    module = dep.target.module
                     visited_layers.append(module)
                     if module in self.ignored_layers:
                         active_plan=False
@@ -228,7 +228,7 @@ class GlobalPruner(MetaPruner):
     def _adjust_sparsity(self, plan):
         new_idxs = plan[0][1]
         n_prune = len(new_idxs)
-        for i, (dep, idxs) in enumerate(plan):
+        for dep, idxs in plan:
             module = dep.target.module
             if dep.handler in [
                 functional.prune_conv_out_channel,
@@ -237,9 +237,7 @@ class GlobalPruner(MetaPruner):
                 max_ch_sparsity = self.layer_ch_sparsity.get(module, self.max_ch_sparsity)
                 min_layer_channels = self.layer_init_out_ch[module] * (1 - max_ch_sparsity)
                 layer_channels = utils.count_prunable_out_channels(module)
-                if len(idxs) <= int(layer_channels - min_layer_channels):
-                    continue
-                else:
+                if len(idxs) > int(layer_channels - min_layer_channels):
                     n_prune = int(layer_channels - min_layer_channels)
             elif dep.handler in [
                 functional.prune_conv_in_channel,

@@ -40,11 +40,11 @@ class MetricCompose(dict):
                 metric.update(outputs, targets)
     
     def get_results(self):
-        results = {}
-        for key, metric in self._metric_dict.items():
-            if isinstance(metric, Metric):
-                results[key] = metric.get_results()
-        return results
+        return {
+            key: metric.get_results()
+            for key, metric in self._metric_dict.items()
+            if isinstance(metric, Metric)
+        }
 
     def reset(self):
         for key, metric in self._metric_dict.items():
@@ -100,10 +100,7 @@ class RunningLoss(Metric):
     @torch.no_grad()
     def update(self, outputs, targets):
         self._accum_loss += self.loss_fn(outputs, targets)
-        if self.is_batch_average:
-            self._cnt += 1
-        else:
-            self._cnt += len(outputs)
+        self._cnt += 1 if self.is_batch_average else len(outputs)
 
     def get_results(self):
         return (self._accum_loss / self._cnt).detach().cpu()

@@ -43,7 +43,7 @@ def eval(model, test_loader):
     model.to(device)
     model.eval()
     with torch.no_grad():
-        for i, (img, target) in enumerate(test_loader):
+        for img, target in test_loader:
             img = img.to(device)
             out = model(img)
             pred = out.max(1)[1].detach().cpu().numpy()
@@ -100,27 +100,27 @@ def prune_model(model):
 
 def main():
     train_loader, test_loader = get_dataloader()
-    if args.mode=='train':
-        args.round=0
-        model = ResNet18(num_classes=10)
-        train_model(model, train_loader, test_loader)
-    elif args.mode=='prune':
+    if args.mode == 'prune':
         previous_ckpt = 'resnet18-round%d.pth'%(args.round-1)
         print("Pruning round %d, load model from %s"%( args.round, previous_ckpt ))
         model = torch.load( previous_ckpt )
         prune_model(model)
         print(model)
-        params = sum([np.prod(p.size()) for p in model.parameters()])
+        params = sum(np.prod(p.size()) for p in model.parameters())
         print("Number of Parameters: %.1fM"%(params/1e6))
         train_model(model, train_loader, test_loader)
-    elif args.mode=='test':
+    elif args.mode == 'test':
         ckpt = 'resnet18-round%d.pth'%(args.round)
-        print("Load model from %s"%( ckpt ))
+        print(f"Load model from {ckpt}")
         model = torch.load( ckpt )
-        params = sum([np.prod(p.size()) for p in model.parameters()])
+        params = sum(np.prod(p.size()) for p in model.parameters())
         print("Number of Parameters: %.1fM"%(params/1e6))
         acc = eval(model, test_loader)
         print("Acc=%.4f\n"%(acc))
+    elif args.mode == 'train':
+        args.round=0
+        model = ResNet18(num_classes=10)
+        train_model(model, train_loader, test_loader)
 
 if __name__=='__main__':
     main()

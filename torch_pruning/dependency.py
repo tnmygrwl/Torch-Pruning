@@ -41,10 +41,7 @@ class OPTYPE(IntEnum):
 
 def _module2type(module):
     if isinstance(module, TORCH_CONV):
-        if module.groups > 1:
-            return OPTYPE.GROUP_CONV
-        else:
-            return OPTYPE.CONV
+        return OPTYPE.GROUP_CONV if module.groups > 1 else OPTYPE.CONV
     elif isinstance(module, TORCH_BATCHNORM):
         return OPTYPE.BN
     elif isinstance(module, TORCH_PRELU):
@@ -70,7 +67,7 @@ def _module2type(module):
 
 
 def _infer_out_dim_from_node(node):
-    if node.type == OPTYPE.CONV or node.type == OPTYPE.GROUP_CONV:
+    if node.type in [OPTYPE.CONV, OPTYPE.GROUP_CONV]:
         return node.module.out_channels
     elif node.type == OPTYPE.BN:
         return node.module.num_features
@@ -79,10 +76,7 @@ def _infer_out_dim_from_node(node):
     elif node.type == OPTYPE.LINEAR:
         return node.module.out_features
     elif node.type == OPTYPE.PRELU:
-        if node.module.num_parameters == 1:
-            return None  # return None if oc can not be infered
-        else:
-            return node.module.num_parameters
+        return None if node.module.num_parameters == 1 else node.module.num_parameters
     elif node.type == OPTYPE.PARAMETER:
         return node.module.shape[functional.prune_parameter.dim]
     elif node.type == OPTYPE.CUSTOMIZED:
@@ -94,7 +88,7 @@ def _infer_out_dim_from_node(node):
 
 
 def _infer_in_dim_from_node(node):
-    if node.type == OPTYPE.CONV or node.type == OPTYPE.GROUP_CONV:
+    if node.type in [OPTYPE.CONV, OPTYPE.GROUP_CONV]:
         return node.module.in_channels
     elif node.type == OPTYPE.BN:
         return node.module.num_features
@@ -103,10 +97,7 @@ def _infer_in_dim_from_node(node):
     elif node.type == OPTYPE.LINEAR:
         return node.module.in_features
     elif node.type == OPTYPE.PRELU:
-        if node.module.num_parameters == 1:
-            return None  # return None if ic can not be infered
-        else:
-            return node.module.num_parameters
+        return None if node.module.num_parameters == 1 else node.module.num_parameters
     elif node.type == OPTYPE.PARAMETER:
         return node.module.shape[functional.prune_parameter.dim]
     elif node.type == OPTYPE.CUSTOMIZED:
@@ -137,11 +128,10 @@ class Node(object):
     def name(self):
         if self._name is None:
             return str(self.module)
-        else:
-            fmt = self._name
-            if self.type != OPTYPE.PARAMETER:
-                fmt += " ({})".format(str(self.module))
-            return fmt
+        fmt = self._name
+        if self.type != OPTYPE.PARAMETER:
+            fmt += f" ({str(self.module)})"
+        return fmt
 
     def add_input(self, node):
         if node not in self.inputs:
@@ -152,23 +142,23 @@ class Node(object):
             self.outputs.append(node)
 
     def __repr__(self):
-        return "<Node: ({})>".format(self.name)
+        return f"<Node: ({self.name})>"
 
     def __str__(self):
-        return "<Node: ({})>".format(self.name)
+        return f"<Node: ({self.name})>"
 
     def details(self):
-        fmt = "<Node: ({})>\n".format(self.name)
+        fmt = f"<Node: ({self.name})>\n"
         fmt += " " * 4 + "IN:\n"
         for in_node in self.inputs:
-            fmt += " " * 8 + "{}\n".format(in_node)
+            fmt += " " * 8 + f"{in_node}\n"
         fmt += " " * 4 + "OUT:\n"
         for out_node in self.outputs:
-            fmt += " " * 8 + "{}\n".format(out_node)
+            fmt += " " * 8 + f"{out_node}\n"
         fmt += " " * 4 + "DEP:\n"
         for dep in self.dependencies:
-            fmt += " " * 8 + "{}\n".format(dep)
-        fmt += "\tEnable_index_transform={}\n".format(self.enable_index_transform)
+            fmt += " " * 8 + f"{dep}\n"
+        fmt += f"\tEnable_index_transform={self.enable_index_transform}\n"
         return fmt
 
 
@@ -196,23 +186,17 @@ class Dependency(object):
         self.index_transform = index_transform
 
     def __call__(self, idxs: list, dry_run: bool = False):
-        result = self.handler(
+        return self.handler(
             self.target.module,
             idxs,
             dry_run=dry_run,
         )
-        return result
 
     def __repr__(self):
         return str(self)
 
     def __str__(self):
-        return "[DEP] {} on {} => {} on {}".format(
-            "None" if self.trigger is None else self.trigger.__class__.__name__,
-            self.source.name,
-            self.handler.__class__.__name__,
-            self.target.name,
-        )
+        return f'[DEP] {"None" if self.trigger is None else self.trigger.__class__.__name__} on {self.source.name} => {self.handler.__class__.__name__} on {self.target.name}'
 
     def is_triggered_by(self, pruning_fn):
         return pruning_fn == self.trigger
@@ -235,7 +219,7 @@ class PruningPlan(object):
     """
 
     def __init__(self):
-        self._plans = list()
+        self._plans = []
         self._metrics_scalar_sum = helpers.ScalarSum()
         self._metrics_vector_sum = helpers.VectorSum()
 
@@ -257,20 +241,17 @@ class PruningPlan(object):
         return per_layer_metrics
 
     def has_dep(self, dep):
-        for _dep, _ in self._plans:
-            if dep == _dep:
-                return True
-        return False
+        return any(dep == _dep for _dep, _ in self._plans)
 
     def has_pruning_op(self, dep, idxs):
-        for _dep, _idxs in self._plans:
-            if (
+        return any(
+            (
                 _dep.target == dep.target
                 and _dep.handler == dep.handler
                 and _idxs == idxs
-            ):
-                return True
-        return False
+            )
+            for _dep, _idxs in self._plans
+        )
 
     def __len__(self):
         return len(self._plans)
@@ -299,14 +280,14 @@ class PruningPlan(object):
                     self._metrics_vector_sum.update(k, v)
             if i == 0:
                 fmt += "User pruning:\n"
-            fmt += "[ {}, Index={}, metric={}]\n".format(dep, idxs, metric_dict)
+            fmt += f"[ {dep}, Index={idxs}, metric={metric_dict}]\n"
             if i == 0:
                 fmt += "\nCoupled pruning:\n"
 
         scalar_metric = self._metrics_scalar_sum.results()
         vector_metric = self._metrics_vector_sum.results()
         scalar_metric.update(vector_metric)
-        fmt += "\nMetric Sum: {}\n".format(scalar_metric)
+        fmt += f"\nMetric Sum: {scalar_metric}\n"
         fmt += "-" * 32 + "\n"
         return fmt
 
@@ -487,7 +468,7 @@ class DependencyGraph(object):
 
         def _fix_dependency_graph_non_recursive(node, fn, indices):
             processing_stack = [(node, fn, indices)]
-            while len(processing_stack) > 0:
+            while processing_stack:
                 node, fn, indices = processing_stack.pop(-1)
                 # print(node in visited)
                 visited.add(node)
@@ -505,11 +486,10 @@ class DependencyGraph(object):
                             dep, new_indices
                         ):
                             continue
-                        else:
-                            plan.add_plan(dep, new_indices)
-                            processing_stack.append(
-                                (dep.target, dep.handler, new_indices)
-                            )
+                        plan.add_plan(dep, new_indices)
+                        processing_stack.append(
+                            (dep.target, dep.handler, new_indices)
+                        )
 
         _fix_dependency_graph_non_recursive(root_node, pruning_fn, idxs)
 
@@ -597,7 +577,7 @@ class DependencyGraph(object):
         # build graph
         if output_transform is not None:
             out = output_transform(out)
-        
+
         module2node = {}
         for o in flatten_as_list(out):
             self._build_graph(module2node, o.grad_fn, gradfn2module, reused)
@@ -610,7 +590,7 @@ class DependencyGraph(object):
             for node in module2node.values():
                 if node.type in (OPTYPE.CONCAT, OPTYPE.SPLIT):
                     stack = [node]
-                    while len(stack) > 0:
+                    while stack:
                         n = stack.pop(-1)
                         if n.type == OPTYPE.PARAMETER and len(n.module.shape) == 3:
                             node.enable_index_transform = False
@@ -664,7 +644,7 @@ class DependencyGraph(object):
         # non-recursive graph construction
         processing_stack = [grad_fn_root]
         visited = set()
-        while len(processing_stack) > 0:
+        while processing_stack:
             grad_fn = processing_stack.pop(-1)
             if grad_fn in visited:
                 continue
@@ -731,12 +711,9 @@ class DependencyGraph(object):
     def _set_concat_index_transform(self, cat_node: Node):
         if cat_node.type != OPTYPE.CONCAT:
             return
-        chs = []
-        for n in cat_node.inputs:
-            chs.append(_infer_out_dim_from_node_by_recursion(n))
+        chs = [_infer_out_dim_from_node_by_recursion(n) for n in cat_node.inputs]
         offsets = [0]
-        for ch in chs:
-            offsets.append(offsets[-1] + ch)
+        offsets.extend(offsets[-1] + ch for ch in chs)
         cat_node.module.offsets = offsets
 
         # no transform if the concat dim is different from the feature dim
@@ -759,13 +736,9 @@ class DependencyGraph(object):
         if split_node.type != OPTYPE.SPLIT:
             return
 
-        chs = []
-        for n in split_node.outputs:
-            chs.append(_infer_in_dim_from_node_by_recursion(n))
-
+        chs = [_infer_in_dim_from_node_by_recursion(n) for n in split_node.outputs]
         offsets = [0]
-        for ch in chs:
-            offsets.append(offsets[-1] + ch)
+        offsets.extend(offsets[-1] + ch for ch in chs)
         split_node.module.offsets = offsets
 
         for i, out_node in enumerate(split_node.outputs):
@@ -833,10 +806,7 @@ def count_prunable_out_channels(module):
     elif isinstance(module, TORCH_BATCHNORM):
         return module.num_features
     elif isinstance(module, TORCH_PRELU):
-        if len(module.weight) == 1:
-            return 0
-        else:
-            return len(module.weight)
+        return 0 if len(module.weight) == 1 else len(module.weight)
     else:
         return 0
 
@@ -849,9 +819,6 @@ def count_prunable_in_channels(module):
     elif isinstance(module, TORCH_BATCHNORM):
         return module.num_features
     elif isinstance(module, TORCH_PRELU):
-        if len(module.weight) == 1:
-            return 0
-        else:
-            return len(module.weight)
+        return 0 if len(module.weight) == 1 else len(module.weight)
     else:
         return 0

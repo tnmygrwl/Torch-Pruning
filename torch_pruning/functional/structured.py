@@ -44,8 +44,7 @@ class BasePruner(ABC):
 
 class ConvOutChannelPruner(BasePruner):
     def prune(self, layer: nn.Module, idxs: Sequence[int]) -> nn.Module: 
-        keep_idxs = list(set(range(layer.out_channels)) - set(idxs))
-        keep_idxs.sort()
+        keep_idxs = sorted(set(range(layer.out_channels)) - set(idxs))
         layer.out_channels = layer.out_channels-len(idxs)
         if not layer.transposed:
             layer.weight = torch.nn.Parameter(layer.weight.data.clone()[keep_idxs])
@@ -57,8 +56,9 @@ class ConvOutChannelPruner(BasePruner):
     
     @staticmethod
     def calc_nparams_to_prune(layer: nn.Module, idxs: Sequence[int]) -> int: 
-        nparams_to_prune = len(idxs) * reduce(mul, layer.weight.shape[1:]) + (len(idxs) if layer.bias is not None else 0)
-        return nparams_to_prune
+        return len(idxs) * reduce(mul, layer.weight.shape[1:]) + (
+            len(idxs) if layer.bias is not None else 0
+        )
 
 
 class ConvInChannelPruner(BasePruner):
@@ -74,8 +74,7 @@ class ConvInChannelPruner(BasePruner):
         
     @staticmethod
     def calc_nparams_to_prune(layer: nn.Module, idxs: Sequence[int]) -> int: 
-        nparams_to_prune = len(idxs) *  layer.weight.shape[0] * reduce(mul ,layer.weight.shape[2:])
-        return nparams_to_prune
+        return len(idxs) *  layer.weight.shape[0] * reduce(mul ,layer.weight.shape[2:])
 
 class GroupConvPruner(ConvOutChannelPruner):
 
@@ -83,8 +82,7 @@ class GroupConvPruner(ConvOutChannelPruner):
         pass
 
     def prune(self, layer: nn.Module, idxs: Sequence[int]) -> nn.Module: 
-        keep_idxs = list(set(range(layer.out_channels)) - set(idxs))
-        keep_idxs.sort()
+        keep_idxs = sorted(set(range(layer.out_channels)) - set(idxs))
         layer.out_channels = layer.out_channels-len(idxs)
         layer.in_channels = layer.in_channels-len(idxs)
         layer.groups = layer.groups-len(idxs)
@@ -96,8 +94,7 @@ class GroupConvPruner(ConvOutChannelPruner):
 
 class LinearOutChannelPruner(BasePruner):
     def prune(self, layer: nn.Module, idxs: Sequence[int]) -> nn.Module: 
-        keep_idxs = list(set(range(layer.out_features)) - set(idxs))
-        keep_idxs.sort()
+        keep_idxs = sorted(set(range(layer.out_features)) - set(idxs))
         layer.out_features = layer.out_features-len(idxs)
         layer.weight = torch.nn.Parameter(layer.weight.data.clone()[keep_idxs])
         if layer.bias is not None:
@@ -106,27 +103,25 @@ class LinearOutChannelPruner(BasePruner):
 
     @staticmethod
     def calc_nparams_to_prune(layer: nn.Module, idxs: Sequence[int]) -> int: 
-        nparams_to_prune = len(idxs)*layer.weight.shape[1] + (len(idxs) if layer.bias is not None else 0)
-        return nparams_to_prune
+        return len(idxs) * layer.weight.shape[1] + (
+            len(idxs) if layer.bias is not None else 0
+        )
 
 class LinearInChannelPruner(BasePruner):
     def prune(self, layer: nn.Module, idxs: Sequence[int]) -> nn.Module: 
-        keep_idxs = list(set(range(layer.in_features)) - set(idxs))
-        keep_idxs.sort()
+        keep_idxs = sorted(set(range(layer.in_features)) - set(idxs))
         layer.in_features = layer.in_features-len(idxs)
         layer.weight = torch.nn.Parameter(layer.weight.data.clone()[:, keep_idxs])
         return layer
 
     @staticmethod
     def calc_nparams_to_prune(layer: nn.Module, idxs: Sequence[int]) -> int: 
-        nparams_to_prune = len(idxs) *  layer.weight.shape[0]
-        return nparams_to_prune
+        return len(idxs) *  layer.weight.shape[0]
 
 
 class BatchnormPruner(BasePruner):
     def prune(self, layer: nn.Module, idxs: Sequence[int]) -> nn.Module: 
-        keep_idxs = list(set(range(layer.num_features)) - set(idxs))
-        keep_idxs.sort()
+        keep_idxs = sorted(set(range(layer.num_features)) - set(idxs))
         layer.num_features = layer.num_features-len(idxs)
         layer.running_mean = layer.running_mean.data.clone()[keep_idxs]
         layer.running_var = layer.running_var.data.clone()[keep_idxs]
@@ -137,8 +132,7 @@ class BatchnormPruner(BasePruner):
     
     @staticmethod
     def calc_nparams_to_prune(layer: nn.Module, idxs: Sequence[int]) -> int: 
-        nparams_to_prune = len(idxs)* ( 2 if layer.affine else 1)
-        return nparams_to_prune
+        return len(idxs)* ( 2 if layer.affine else 1)
 
 
 class LayernormPruner(BasePruner):
@@ -167,41 +161,40 @@ class LayernormPruner(BasePruner):
     
     @staticmethod
     def calc_nparams_to_prune(layer: nn.Module, idxs: Sequence[int]) -> int:
-        nparams_to_prune = len(idxs) * 2 if layer.elementwise_affine and len(layer.normalized_shape) >= -layer.pruning_dim else 0
-        return nparams_to_prune
+        return (
+            len(idxs) * 2
+            if layer.elementwise_affine
+            and len(layer.normalized_shape) >= -layer.pruning_dim
+            else 0
+        )
 
 class PReLUPruner(BasePruner):
-    def prune(self, layer: nn.PReLU, idxs: list)-> nn.Module: 
+    def prune(self, layer: nn.PReLU, idxs: list) -> nn.Module: 
         if layer.num_parameters==1: return layer
-        keep_idxs = list(set(range(layer.num_parameters)) - set(idxs))
-        keep_idxs.sort()
+        keep_idxs = sorted(set(range(layer.num_parameters)) - set(idxs))
         layer.num_parameters = layer.num_parameters-len(idxs)
         layer.weight = torch.nn.Parameter(layer.weight.data.clone()[keep_idxs])
         return layer
     
     @staticmethod
     def calc_nparams_to_prune(layer: nn.PReLU, idxs: Sequence[int]) -> int: 
-        nparams_to_prune = 0 if layer.num_parameters==1 else len(idxs)
-        return nparams_to_prune
+        return 0 if layer.num_parameters==1 else len(idxs)
 
 class EmbeddingPruner(BasePruner):  
-    def prune(self, layer: nn.Embedding, idxs: list)-> nn.Module:
+    def prune(self, layer: nn.Embedding, idxs: list) -> nn.Module:
         num_features = layer.embedding_dim
-        keep_idxs = list(set(range(num_features)) - set(idxs))
-        keep_idxs.sort()
+        keep_idxs = sorted(set(range(num_features)) - set(idxs))
         layer.weight = torch.nn.Parameter(layer.weight.data.clone()[:, keep_idxs])
         layer.embedding_dim = len(keep_idxs)
         return layer
 
     @staticmethod
     def calc_nparams_to_prune(layer: nn.Embedding, idxs: Sequence[int]) -> int:
-        nparams_to_prune = layer.num_embeddings * len(idxs)
-        return nparams_to_prune
+        return layer.num_embeddings * len(idxs)
 
 class ParameterPruner(BasePruner):
-    def prune(self, tensor, idxs: list)-> nn.Module:
-        keep_idxs = list(set(range(tensor.data.shape[self.dim])) - set(idxs))
-        keep_idxs.sort()
+    def prune(self, tensor, idxs: list) -> nn.Module:
+        keep_idxs = sorted(set(range(tensor.data.shape[self.dim])) - set(idxs))
         tensor.data = torch.index_select(tensor.data, self.dim, torch.LongTensor(keep_idxs))
         return tensor
 
@@ -212,40 +205,36 @@ class ParameterPruner(BasePruner):
 class MultiheadAttentionPruner(BasePruner):
     def check(self, layer, idxs):
         assert (layer.embed_dim - len(idxs))  % layer.num_heads == 0, "embed_dim (%d) of MultiheadAttention after pruning must divide evenly by `num_heads` (%d)"%(layer.embed_dim, layer.num_heads)
-    def prune(self, layer, idxs: list)-> nn.Module:
-        keep_idxs = list(set(range(layer.embed_dim)) - set(idxs))
-        keep_idxs.sort()
+    def prune(self, layer, idxs: list) -> nn.Module:
+        keep_idxs = sorted(set(range(layer.embed_dim)) - set(idxs))
         if layer.q_proj_weight is not None:
             layer.q_proj_weight.data = torch.index_select(layer.q_proj_weight.data, 0, torch.LongTensor(keep_idxs))
         if layer.k_proj_weight is not None:
             layer.q_proj_weight.data = torch.index_select(layer.q_proj_weight.data, 0, torch.LongTensor(keep_idxs))
         if layer.v_proj_weight is not None:
             layer.v_proj_weight.data = torch.index_select(layer.v_proj_weight.data, 0, torch.LongTensor(keep_idxs))
-        
+
         pruning_idxs_3x = idxs + [i+layer.embed_dim for i in idxs] + [i+2*layer.embed_dim for i in idxs]
-        keep_idxs_3x = list(set(range(3*layer.embed_dim)) - set(pruning_idxs_3x))
-        keep_idxs_3x.sort()
+        keep_idxs_3x = sorted(set(range(3*layer.embed_dim)) - set(pruning_idxs_3x))
         if layer.in_proj_weight is not None:
             layer.in_proj_weight.data = torch.index_select(layer.in_proj_weight.data, 0, torch.LongTensor(keep_idxs_3x))
             layer.in_proj_weight.data = torch.index_select(layer.in_proj_weight.data, 1, torch.LongTensor(keep_idxs))
-            
+
         if layer.in_proj_bias is not None:
             layer.in_proj_bias.data = torch.index_select(layer.in_proj_bias.data, 0, torch.LongTensor(keep_idxs_3x))
-        
+
         if layer.bias_k is not None:
             layer.bias_k.data = torch.index_select(layer.bias_k.data, 2, torch.LongTensor(keep_idxs))
         if layer.bias_v is not None:
             layer.bias_v.data = torch.index_select(layer.bias_v.data, 2, torch.LongTensor(keep_idxs))
-        
+
         linear = layer.out_proj
-        keep_idxs = list(set(range(linear.out_features)) - set(idxs))
-        keep_idxs.sort()
+        keep_idxs = sorted(set(range(linear.out_features)) - set(idxs))
         linear.out_features = linear.out_features-len(idxs)
         linear.weight = torch.nn.Parameter(linear.weight.data.clone()[keep_idxs])
         if linear.bias is not None:
             linear.bias = torch.nn.Parameter(linear.bias.data.clone()[keep_idxs])
-        keep_idxs = list(set(range(linear.in_features)) - set(idxs))
-        keep_idxs.sort()
+        keep_idxs = sorted(set(range(linear.in_features)) - set(idxs))
         linear.in_features = linear.in_features-len(idxs)
         linear.weight = torch.nn.Parameter(linear.weight.data.clone()[:, keep_idxs])
         layer.embed_dim = layer.embed_dim - len(idxs)
@@ -254,8 +243,11 @@ class MultiheadAttentionPruner(BasePruner):
     @staticmethod
     def calc_nparams_to_prune(layer: nn.Embedding, idxs: Sequence[int]) -> int:
         linear = layer.out_proj
-        nparams_to_prune = len(idxs)*linear.weight.shape[1] + len(idxs) * (layer.embed_dim - len(idxs)) + (len(idxs) if linear.bias is not None else 0) 
-        return nparams_to_prune
+        return (
+            len(idxs) * linear.weight.shape[1]
+            + len(idxs) * (layer.embed_dim - len(idxs))
+            + (len(idxs) if linear.bias is not None else 0)
+        )
 
 
 prune_conv_in_channel = ConvInChannelPruner()

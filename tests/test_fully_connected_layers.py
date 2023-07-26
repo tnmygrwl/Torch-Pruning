@@ -16,8 +16,7 @@ class FullyConnectedNet(nn.Module):
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
-        y_hat = self.fc2(x)
-        return y_hat
+        return self.fc2(x)
 
 model = FullyConnectedNet(128, 10, 256)
 

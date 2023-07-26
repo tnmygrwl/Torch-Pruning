@@ -21,7 +21,7 @@ class _CustomizedOp(nn.Module):
         self.op_cls = op_class
 
     def __repr__(self):
-        return "CustomizedOp({})".format(str(self.op_cls))
+        return f"CustomizedOp({str(self.op_cls)})"
 
 
 ######################################################
@@ -32,7 +32,7 @@ class _ConcatOp(nn.Module):
         self.offsets = None
 
     def __repr__(self):
-        return "_ConcatOp({})".format(self.offsets)
+        return f"_ConcatOp({self.offsets})"
 
 
 class DummyMHA(nn.Module):
@@ -46,7 +46,7 @@ class _SplitOp(nn.Module):
         self.offsets = None
 
     def __repr__(self):
-        return "_SplitOp({})".format(self.offsets)
+        return f"_SplitOp({self.offsets})"
 
 
 class _ElementWiseOp(nn.Module):
@@ -55,7 +55,7 @@ class _ElementWiseOp(nn.Module):
         self._grad_fn = grad_fn
 
     def __repr__(self):
-        return "_ElementWiseOp({})".format(self._grad_fn)
+        return f"_ElementWiseOp({self._grad_fn})"
 
 
 ######################################################
@@ -97,12 +97,11 @@ class _FlattenIndexTransform(object):
 
     def __call__(self, idxs):
         new_idxs = []
-        if self.reverse == True:
-            for i in idxs:
+        for i in idxs:
+            if self.reverse == True:
                 new_idxs.append(i // self._stride)
                 new_idxs = list(set(new_idxs))
-        else:
-            for i in idxs:
+            else:
                 new_idxs.extend(list(range(i * self._stride, (i + 1) * self._stride)))
         return new_idxs
 
@@ -113,15 +112,15 @@ class _ConcatIndexTransform(object):
         self.reverse = reverse
     def __call__(self, idxs):
 
-        if self.reverse == True:
-            new_idxs = [
+        return (
+            [
                 i - self.offset[0]
                 for i in idxs
                 if (i >= self.offset[0] and i < self.offset[1])
             ]
-        else:
-            new_idxs = [i + self.offset[0] for i in idxs]
-        return new_idxs
+            if self.reverse == True
+            else [i + self.offset[0] for i in idxs]
+        )
 
 
 class _SplitIndexTransform(object):
@@ -130,15 +129,15 @@ class _SplitIndexTransform(object):
         self.reverse = reverse
 
     def __call__(self, idxs):
-        if self.reverse == True:
-            new_idxs = [i + self.offset[0] for i in idxs]
-        else:
-            new_idxs = [
+        return (
+            [i + self.offset[0] for i in idxs]
+            if self.reverse == True
+            else [
                 i - self.offset[0]
                 for i in idxs
                 if (i >= self.offset[0] and i < self.offset[1])
             ]
-        return new_idxs
+        )
 
 
 class _GroupConvIndexTransform(object):
@@ -166,7 +165,7 @@ class GConv(nn.Module):
         self.convs = nn.ModuleList()
         oc_size = gconv.out_channels // self.groups
         ic_size = gconv.in_channels // self.groups
-        for g in range(self.groups):
+        for _ in range(self.groups):
             self.convs.append(
                 nn.Conv2d(
                     in_channels=oc_size,
@@ -191,8 +190,7 @@ class GConv(nn.Module):
     def forward(self, x):
         split_sizes = [conv.in_channels for conv in self.convs]
         xs = torch.split(x, split_sizes, dim=1)
-        out = torch.cat([conv(xi) for (conv, xi) in zip(self.convs, xs)], dim=1)
-        return out
+        return torch.cat([conv(xi) for (conv, xi) in zip(self.convs, xs)], dim=1)
 
 
 def gconv2convs(module):

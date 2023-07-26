@@ -63,8 +63,7 @@ def create_mask(window_size, displacement, upper_lower, left_right):
 
 def get_relative_distances(window_size):
     indices = torch.tensor(np.array([[x, y] for x in range(window_size) for y in range(window_size)]))
-    distances = indices[None, :, :] - indices[:, None, :]
-    return distances
+    return indices[None, :, :] - indices[:, None, :]
 
 
 class WindowAttention(nn.Module):

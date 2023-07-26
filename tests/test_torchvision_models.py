@@ -143,10 +143,9 @@ if __name__ == "__main__":
             round_to = model.encoder.layers[0].num_heads
             user_defined_parameters = [model.class_token, model.encoder.pos_embedding]
         elif isinstance(model, ConvNeXt):
-            user_defined_parameters = []
-            for m in model.modules():
-                if isinstance(m, CNBlock):
-                    user_defined_parameters.append(m.layer_scale)
+            user_defined_parameters = [
+                m.layer_scale for m in model.modules() if isinstance(m, CNBlock)
+            ]
             tp.functional.prune_parameter.dim = 0
 
         importance = tp.importance.MagnitudeImportance(p=2)
@@ -174,7 +173,7 @@ if __name__ == "__main__":
             if output_transform:
                 out = output_transform(out)
             print(model_name)
-            print("  Params: %s => %s" % (ori_size, tp.utils.count_params(model)))
+            print(f"  Params: {ori_size} => {tp.utils.count_params(model)}")
             if isinstance(out, dict):
                 print("  Output:")
                 for o in out.values():

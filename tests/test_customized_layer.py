@@ -37,8 +37,7 @@ class FullyConnectedNet(nn.Module):
     def forward(self, x):
         x = F.relu(self.fc1(x))
         x = self.customized_layer(x)
-        y_hat = self.fc2(x)
-        return y_hat
+        return self.fc2(x)
 
 ############################
 # Implement your pruning function for the customized layer
@@ -54,8 +53,7 @@ class MyPruningFn(tp.functional.structured.BasePruner):
     
     @staticmethod
     def calc_nparams_to_prune(layer: CustomizedLayer, idxs: Sequence[int]) -> int: 
-        nparams_to_prune = len(idxs) * 2
-        return nparams_to_prune
+        return len(idxs) * 2
         
 my_pruning_fn = MyPruningFn()
 

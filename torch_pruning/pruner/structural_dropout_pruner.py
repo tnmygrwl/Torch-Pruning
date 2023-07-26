@@ -18,8 +18,7 @@ class StructrualDropout(nn.Module):
         C = x.shape[1]
         if self.mask is None:
             self.mask = (torch.cuda.FloatTensor(C, device=x.device).uniform_() > self.p).view(1, -1, 1, 1)
-        res = x * self.mask
-        return res
+        return x * self.mask
     
     def reset(self, p):
         self.p = p

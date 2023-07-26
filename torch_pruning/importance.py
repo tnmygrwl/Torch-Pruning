@@ -120,10 +120,10 @@ class SensitivityImportance(Importance):
 
                 if self.local:
                     break
-            if self.reduction == "sum":
-                return importance
-            elif self.reduction == "mean":
+            if self.reduction == "mean":
                 return importance / n_layers
+            elif self.reduction == "sum":
+                return importance
             
 
 
@@ -270,14 +270,6 @@ class LAMPImportance(Importance):
                 non_importance = False
             elif prune_fn == functional.prune_batchnorm:
                 continue
-                if layer.affine is not None:
-                    #scale = layer.weight / sqrt_rv
-                    #bias = layer.bias - rm / sqrt_rv * layer.weight
-                    w = (layer.weight)[idxs].view(-1, 1)
-                    importance += rescale(torch.norm(w, dim=1, p=self.p))
-                    #w = (bias)[idxs].view(-1, 1)
-                    #importance *= torch.norm(w, dim=1, p=self.p)
-            #        non_importance = False
             else:
                 n_layers -= 1
             if self.local:
@@ -285,12 +277,12 @@ class LAMPImportance(Importance):
         argsort_idx = torch.argsort(importance).tolist()[::-1] # [7, 5, 2, 3, 1, ...]
         sorted_importance = importance[argsort_idx]
         cumsum_importance = torch.cumsum(sorted_importance, dim=0 )
-        sorted_importance = sorted_importance / cumsum_importance 
+        sorted_importance = sorted_importance / cumsum_importance
         inversed_idx = torch.arange(len(sorted_importance))[argsort_idx].tolist() # [0, 1, 2, 3, ..., ]
         importance = sorted_importance[inversed_idx]
         if non_importance:
             return None
-        if self.reduction == "sum":
-            return importance
-        elif self.reduction == "mean":
+        if self.reduction == "mean":
             return importance / n_layers
+        elif self.reduction == "sum":
+            return importance

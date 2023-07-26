@@ -93,10 +93,7 @@ class ResNet(nn.Module):
         out = F.avg_pool2d(out, 4)
         feature = out.view(out.size(0), -1)
         out = self.linear(feature)
-        if out_feature == False:
-            return out
-        else:
-            return out,feature
+        return out if out_feature == False else (out, feature)
  
  
 def ResNet18(num_classes=10):
